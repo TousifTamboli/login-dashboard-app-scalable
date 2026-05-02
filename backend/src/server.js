@@ -5,6 +5,7 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 
 
 // ===== Error Handler =====

@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import redisClient from "../config/redis.js";
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -74,4 +75,56 @@ export const login = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
+};
+
+
+export const refresh = async (req, res) => {
+  const token = req.cookies.refreshToken;
+
+  if (!token) return res.status(401).json({ message: "No token" });
+
+  // 🔥 check if blacklisted
+  const isBlocked = await redisClient.get(token);
+  if (isBlocked) {
+    return res.status(403).json({ message: "Token blocked" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    const newAccessToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "Strict",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.json({ message: "Refreshed" });
+
+  } catch {
+    res.status(403).json({ message: "Invalid token" });
+  }
+};
+
+
+export const logout = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (refreshToken) {
+    // store token in Redis blacklist
+    await redisClient.set(refreshToken, "blocked", {
+      EX: 7 * 24 * 60 * 60, // expire in 7 days
+    });
+  }
+
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+
+  res.json({ message: "Logged out securely" });
 };
