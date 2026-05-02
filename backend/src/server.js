@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
+import authRoutes from "./routes/authRoutes.js";
 
 dotenv.config();
 
@@ -10,6 +12,7 @@ const app = express();
 
 // ===== Middleware =====
 app.use(helmet());
+app.use(cookieParser());
 app.use(express.json());
 
 // ===== CORS CONFIG =====
@@ -44,6 +47,8 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
+app.use("/api/auth", authRoutes);
+
 
 // ===== Error Handler =====
 app.use((err, req, res, next) => {
