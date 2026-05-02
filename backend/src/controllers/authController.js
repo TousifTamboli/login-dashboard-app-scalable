@@ -3,20 +3,18 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import redisClient from "../config/redis.js";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const generateAccessToken = (user) => {
-  return jwt.sign(
-    { id: user._id },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: "15m" }
-  );
+  return jwt.sign({ id: user._id }, process.env.JWT_ACCESS_SECRET, {
+    expiresIn: "15m",
+  });
 };
 
 const generateRefreshToken = (user) => {
-  return jwt.sign(
-    { id: user._id },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "7d" }
-  );
+  return jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: "7d",
+  });
 };
 
 // REGISTER
@@ -50,33 +48,35 @@ export const login = async (req, res) => {
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
     // 🔥 PRODUCTION: httpOnly cookies
-    res.cookie("accessToken", accessToken, {
+    const cookieOptions = {
       httpOnly: true,
-      secure: false, // change to true in production (HTTPS)
-      sameSite: "Strict",
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Strict",
+    };
+
+    res.cookie("accessToken", accessToken, {
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "Strict",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({ message: "Login successful" });
-
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("LOGIN ERROR:", err);
+    res.status(500).json({ message: err.message });
   }
 };
-
 
 export const refresh = async (req, res) => {
   const token = req.cookies.refreshToken;
@@ -95,7 +95,7 @@ export const refresh = async (req, res) => {
     const newAccessToken = jwt.sign(
       { id: decoded.id },
       process.env.JWT_ACCESS_SECRET,
-      { expiresIn: "15m" }
+      { expiresIn: "15m" },
     );
 
     res.cookie("accessToken", newAccessToken, {
@@ -106,12 +106,10 @@ export const refresh = async (req, res) => {
     });
 
     res.json({ message: "Refreshed" });
-
   } catch {
     res.status(403).json({ message: "Invalid token" });
   }
 };
-
 
 export const logout = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;

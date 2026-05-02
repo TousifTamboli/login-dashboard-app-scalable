@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
@@ -11,36 +12,35 @@ dotenv.config();
 
 const app = express();
 
-// ===== Middleware =====
+// ===== TRUST PROXY (IMPORTANT for Nginx/CloudFront) =====
+app.set("trust proxy", 1);
+
+// ===== MIDDLEWARE =====
 app.use(helmet());
 app.use(cookieParser());
 app.use(express.json());
 
-// ===== CORS CONFIG =====
+// ===== CORS CONFIG (STRICT + SAFE) =====
 const allowedOrigins = process.env.CLIENT_URLS
   ? process.env.CLIENT_URLS.split(",")
   : [];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // allow Postman/mobile
 
-    if (process.env.NODE_ENV === "development") {
-      return callback(null, true);
-    }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+      return callback(new Error("CORS not allowed"));
+    },
+    credentials: true,
+  })
+);
 
-    return callback(new Error("CORS not allowed"));
-  },
-  credentials: true,
-}));
-
-// app.options("/*", cors());
-
-// ===== Routes =====
+// ===== ROUTES =====
 app.get("/", (req, res) => {
   res.send("API running...");
 });
@@ -48,20 +48,27 @@ app.get("/", (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
+
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 
-
-// ===== Error Handler =====
+// ===== ERROR HANDLER (IMPROVED) =====
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Internal Server Error" });
+  console.error("ERROR:", err.message);
+
+  res.status(err.status || 500).json({
+    message:
+      process.env.NODE_ENV === "production"
+        ? "Something went wrong"
+        : err.message,
+  });
 });
 
-// ===== DB + SERVER START =====
+// ===== DB + SERVER =====
 const PORT = process.env.PORT || 3000;
 
-mongoose.connect(process.env.MONGODB_URI)
+mongoose
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("MongoDB connected");
 
