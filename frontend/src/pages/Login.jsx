@@ -36,7 +36,7 @@ const Login = () => {
             <p className="eyebrow">Secure access</p>
             <h1>Welcome back</h1>
             <p className="muted">
-              Sign in to continue to your dashboard with CI/CD.
+              Sign in to continue to your dashboard with CI/CD when docker in ec2 is off.
             </p>
           </div>
 
