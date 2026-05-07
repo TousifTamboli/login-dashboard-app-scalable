@@ -57,8 +57,8 @@ export const login = async (req, res) => {
     // 🔥 PRODUCTION: httpOnly cookies
     const cookieOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Strict",
+      secure: false,
+      sameSite: "lax",
     };
 
     res.cookie("accessToken", accessToken, {
@@ -101,7 +101,7 @@ export const refresh = async (req, res) => {
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       secure: false,
-      sameSite: "Strict",
+      sameSite: "lax",
       maxAge: 15 * 60 * 1000,
     });
 
