@@ -36,7 +36,7 @@ const Login = () => {
             <p className="eyebrow">Secure access</p>
             <h1>Welcome back</h1>
             <p className="muted">
-              Sign in to continue to your dashboard.
+              Sign in to continue to your dashboard with CI/CD.
             </p>
           </div>
 
