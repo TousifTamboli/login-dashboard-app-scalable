@@ -4,6 +4,7 @@ services:
   backend:
     build: ./backend
     container_name: auth-backend
+    restart: always
     ports:
       - "3000:3000"
     env_file:
@@ -18,6 +19,7 @@ services:
   frontend:
     build: ./frontend
     container_name: auth-frontend
+    restart: always
     ports:
       - "80:80"
     depends_on:
@@ -29,6 +31,7 @@ services:
   mongo:
     image: mongo:7
     container_name: auth-mongo
+    restart: always
     ports:
       - "27017:27017"
     volumes:
@@ -37,6 +40,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: auth-redis
+    restart: always
     ports:
       - "6379:6379"
 
